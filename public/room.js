@@ -277,7 +277,15 @@
       const selected = QUALITY[qualitySelect.value] || QUALITY["1080p30"];
       localStream = await navigator.mediaDevices.getDisplayMedia({
         video: { width: { ideal: selected.width }, height: { ideal: selected.height }, frameRate: { ideal: selected.fps, max: selected.fps } },
+        // Áudio: ao compartilhar uma JANELA, pede o som só daquela janela (windowAudio), e não o do PC inteiro —
+        // senão entram junto o Discord e o resto. Navegador sem suporte ignora essas opções.
         audio: $("systemAudio").checked
+          ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false, suppressLocalAudioPlayback: false, restrictOwnAudio: true }
+          : false,
+        windowAudio: "window",
+        systemAudio: "include",
+        selfBrowserSurface: "exclude",
+        surfaceSwitching: "include"
       });
       // Guardar apenas as faixas de loopback do sistema antes de adicionar o microfone.
       systemAudioTracks = localStream.getAudioTracks().slice();
@@ -304,7 +312,15 @@
       connectPublisherSocket();
       stopBtn.disabled = false;
       const audioCount = localStream.getAudioTracks().length;
-      status(`Transmitindo. ${audioCount ? `${audioCount} faixa(s) de áudio capturada(s).` : "Nenhuma faixa de áudio foi capturada; confira as opções de áudio."} Se o áudio do PC estiver ativo, use “Ouvir a sala” para alternar entre compartilhar o som do PC e escutar os participantes.`, audioCount ? "success" : "warning");
+      // Janela compartilhada mas o navegador entregou o som do PC inteiro (Chrome antigo): avisa
+      const superficie = videoTrack.getSettings?.().displaySurface;
+      const somDoPcInteiro = superficie === "window" && systemAudioTracks.some(t => /system|sistema/i.test(t.label));
+      if (somDoPcInteiro) {
+        status("Transmitindo, mas o navegador pegou o som do PC inteiro (inclui o Discord e o que mais tocar). " +
+          "Pra mandar só o som do jogo: atualize o Chrome/Edge, ou silencie o Discord enquanto transmite, ou desligue “Áudio do sistema”.", "warning");
+      } else {
+        status(`Transmitindo. ${audioCount ? `${audioCount} faixa(s) de áudio capturada(s).` : "Nenhuma faixa de áudio foi capturada; confira as opções de áudio."} Se o áudio do PC estiver ativo, use “Ouvir a sala” para alternar entre compartilhar o som do PC e escutar os participantes.`, audioCount ? "success" : "warning");
+      }
       updateCounts();
     } catch (error) {
       localStream?.getTracks().forEach(track => track.stop());
