@@ -114,6 +114,39 @@ function createSession(interaction) {
   return session;
 }
 
+
+// ---------- API interna (usada pelo bot do WhatsApp) ----------
+// A chave é gerada aqui mesmo e gravada num arquivo fora da public_html; o bot do Zap lê o mesmo arquivo.
+const API_KEY_FILE = process.env.API_KEY_FILE || "/home/u243267678/domains/mrbnexus.com.br/zap-data/antijanja.key";
+let apiKey = null;
+try {
+  const fs = require("node:fs");
+  fs.mkdirSync(path.dirname(API_KEY_FILE), { recursive: true });
+  if (!fs.existsSync(API_KEY_FILE)) fs.writeFileSync(API_KEY_FILE, randomToken(), { mode: 0o600 });
+  apiKey = fs.readFileSync(API_KEY_FILE, "utf8").trim();
+} catch (error) {
+  console.warn("API interna desativada (não consegui criar/ler a chave):", error.message);
+}
+
+function autorizado(req, res, next) {
+  if (!apiKey || !safeEqual(req.get("x-api-key") || "", apiKey)) return res.status(401).json({ erro: "não autorizado" });
+  next();
+}
+
+app.post("/api/salas", express.json({ limit: "2kb" }), autorizado, (req, res) => {
+  const ownerId = String(req.body?.ownerId || "");
+  if (!/^\d{5,25}$/.test(ownerId)) return res.status(400).json({ erro: "ownerId inválido" });
+  const existingId = ownerSessions.get(ownerId);
+  const existing = existingId && sessions.get(existingId);
+  const session = existing || createSession({ user: { id: ownerId }, guildId: null, channelId: null });
+  res.json({ link: sessionLinks(session).room, nova: !existing, expiraMin: Math.round(SESSION_TTL_MS / 60_000) });
+});
+
+app.delete("/api/salas/:ownerId", autorizado, (req, res) => {
+  const sessionId = ownerSessions.get(req.params.ownerId);
+  res.json({ encerrada: Boolean(sessionId && stopSession(sessionId, "O criador encerrou a sala.")) });
+});
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 const commands = [
   new SlashCommandBuilder()
