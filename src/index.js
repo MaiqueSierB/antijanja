@@ -1,24 +1,12 @@
 require("dotenv").config();
-// Na Hostinger: segredos (como DISCORD_TOKEN) ficam num arquivo fora do site,
-// chamado .antijanja.env, que não é apagado nos deploys nem fica acessível pela web.
+// Na Hostinger: segredos (como DISCORD_TOKEN) ficam em
+// /home/u243267678/domains/mrbnexus.com.br/.antijanja.env, fora da public_html
+// (não fica acessível pela web e não é apagado nos deploys).
 {
   const fs = require("node:fs");
-  const nodePath = require("node:path");
-  const os = require("node:os");
-  const candidates = [...new Set([
-    process.env.SECRETS_FILE,
-    nodePath.join(os.homedir(), ".antijanja.env"),
-    process.env.HOME && nodePath.join(process.env.HOME, ".antijanja.env"),
-    "/home/u243267678/.antijanja.env",
-    "/home/u243267678/domains/mrbnexus.com.br/.antijanja.env",
-    nodePath.join(process.cwd(), "..", ".antijanja.env")
-  ].filter(Boolean))];
-  for (const file of candidates) {
-    const found = fs.existsSync(file);
-    console.log(`Arquivo de segredos ${file}: ${found ? "encontrado" : "não encontrado"}`);
-    if (found) require("dotenv").config({ path: file });
-  }
-  console.log(`cwd=${process.cwd()} home=${os.homedir()} token=${process.env.DISCORD_TOKEN ? "definido" : "ausente"}`);
+  const secretsFile = process.env.SECRETS_FILE || "/home/u243267678/domains/mrbnexus.com.br/.antijanja.env";
+  if (fs.existsSync(secretsFile)) require("dotenv").config({ path: secretsFile });
+  else console.warn(`Arquivo de segredos não encontrado: ${secretsFile}`);
 }
 
 const crypto = require("node:crypto");
