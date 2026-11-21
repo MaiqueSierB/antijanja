@@ -18,10 +18,7 @@
     "720p60": { width: 1280, height: 720, fps: 60, bitrate: 5_000_000 },
     "1080p60": { width: 1920, height: 1080, fps: 60, bitrate: 9_000_000 }
   };
-  const iceServers = [
-    { urls: "stun:stun.l.google.com:19302" },
-    ...(window.STREAM_TURN_URL ? [{ urls: window.STREAM_TURN_URL, username: window.STREAM_TURN_USERNAME, credential: window.STREAM_TURN_CREDENTIAL }] : [])
-  ];
+  const iceServers = [{ urls: "stun:stun.l.google.com:19302" }];
 
   let viewerSocket;
   let publisherSocket;
