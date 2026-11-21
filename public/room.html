@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Anti Janja · Sala pública</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    body{min-height:100vh}.stage{background:#050505;min-height:280px;border:1px solid #495057;border-radius:1rem;overflow:hidden}.stage video{width:100%;height:100%;max-height:70vh;object-fit:contain}.stream-card{cursor:pointer;transition:border-color .15s,transform .15s}.stream-card:hover{transform:translateY(-2px)}.stream-card.active{border-color:#0d6efd!important;box-shadow:0 0 0 1px #0d6efd}.stream-thumb{aspect-ratio:16/9;background:#050505}.stream-thumb video{width:100%;height:100%;object-fit:contain}.empty-stage{min-height:280px;display:grid;place-items:center}.small-status{font-size:.82rem}
+  </style>
+</head>
+<body class="bg-dark text-light">
+  <main class="container-fluid container-xxl py-3 py-lg-4">
+    <header class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+      <div class="d-flex align-items-center gap-2"><i class="bi bi-broadcast-pin fs-2 text-primary"></i><div><div class="fw-bold fs-4">ANTI JANJA</div><div class="text-secondary small">Sala pública de transmissões</div></div></div>
+      <div class="d-flex align-items-center gap-2"><span class="badge rounded-pill text-bg-success" id="roomCount">0 AO VIVO</span><button class="btn btn-outline-light btn-sm" id="copyRoom"><i class="bi bi-link-45deg me-1"></i>Copiar link da sala</button></div>
+    </header>
+
+    <div class="row g-3 g-xl-4">
+      <section class="col-12 col-xl-8">
+        <div class="d-flex align-items-center justify-content-between mb-2"><h1 class="h5 mb-0" id="stageTitle">Tela principal</h1><span class="text-secondary small" id="stageAudioState">Selecione uma transmissão</span></div>
+        <div class="stage position-relative d-flex align-items-center justify-content-center" id="stage">
+          <video id="mainVideo" autoplay playsinline controls hidden></video>
+          <div class="empty-stage text-center text-secondary p-4" id="stageEmpty"><div><i class="bi bi-display fs-1 d-block mb-2"></i><div class="fw-semibold">Ninguém está transmitindo ainda</div><div class="small">Clique em “Transmitir minha tela” para começar.</div></div></div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button id="startShare" class="btn btn-primary btn-lg"><i class="bi bi-broadcast me-1"></i>Transmitir minha tela</button>
+          <button id="stopShare" class="btn btn-outline-danger btn-lg" disabled><i class="bi bi-stop-fill me-1"></i>Parar minha transmissão</button>
+          <button id="enableSound" class="btn btn-outline-info" hidden><i class="bi bi-volume-up me-1"></i>Ativar áudio</button>
+          <button id="toggleRoomAudio" class="btn btn-outline-warning" hidden>Ouvir a sala (pausar áudio do PC)</button>
+        </div>
+        <div id="audioModeNotice" class="alert alert-warning mt-3 mb-0" role="status" hidden></div>
+        <div id="status" class="alert alert-secondary mt-3 mb-0" role="status">Conectando à sala...</div>
+      </section>
+
+      <aside class="col-12 col-xl-4">
+        <div class="d-flex align-items-center justify-content-between mb-2"><h2 class="h5 mb-0">Transmissões</h2><span class="text-secondary small" id="streamCount">0 participantes</span></div>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-1 g-2" id="streamGrid"></div>
+        <div class="card bg-body-tertiary border-secondary mt-3"><div class="card-body">
+          <div class="fw-semibold mb-2"><i class="bi bi-volume-up me-1"></i>Configuração de áudio</div>
+          <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="systemAudio" checked><label class="form-check-label" for="systemAudio">Áudio do sistema</label></div>
+          <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="microphoneAudio"><label class="form-check-label" for="microphoneAudio">Meu microfone</label></div>
+          <label class="form-label small mt-2" for="quality">Qualidade</label>
+          <select id="quality" class="form-select form-select-sm"><option value="720p30">720p · 30 FPS (recomendado)</option><option value="1080p30" selected>1080p · 30 FPS</option><option value="720p60">720p · 60 FPS</option><option value="1080p60">1080p · 60 FPS</option></select>
+          <div class="form-text text-secondary mt-2">O áudio do sistema depende da fonte selecionada e da opção “Compartilhar áudio” do navegador. Ao compartilhar o áudio do PC, o áudio recebido dos outros participantes é silenciado para impedir que o navegador capture esse som novamente. Use “Ouvir a sala” para pausar temporariamente o áudio do PC e escutar os participantes.</div>
+        </div></div>
+      </aside>
+    </div>
+    <footer class="text-center text-secondary small mt-4">Qualquer pessoa com o link pode assistir e transmitir. Compartilhe o endereço apenas com quem deseja permitir acesso.</footer>
+  </main>
+  <script defer src="/socket.io/socket.io.js"></script>
+  <script defer src="/room.js"></script>
+</body>
+</html>
