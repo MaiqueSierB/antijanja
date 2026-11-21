@@ -1,4 +1,7 @@
 require("dotenv").config();
+// Na Hostinger: segredos (como DISCORD_TOKEN) ficam num arquivo fora do site,
+// em ~/.antijanja.env, que não é apagado nos deploys nem fica acessível pela web.
+require("dotenv").config({ path: require("node:path").join(require("node:os").homedir(), ".antijanja.env") });
 
 const crypto = require("node:crypto");
 const path = require("node:path");
