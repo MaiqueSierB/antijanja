@@ -1,7 +1,7 @@
 {
   "name": "discord-screen-stream",
-  "version": "1.1.0",
-  "description": "Bot Discord e transmissão de tela via WebRTC com sinalização Socket.IO",
+  "version": "1.2.0",
+  "description": "Bot Discord do Regresso: transmissão de tela (WebRTC) e comandos de resenha",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -14,6 +14,10 @@
     "discord.js": "^14.19.3",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "better-sqlite3": "^12.2.0"
+  },
+  "optionalDependencies": {
+    "sharp": "^0.34.4"
   }
 }

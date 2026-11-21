@@ -187,6 +187,13 @@ io.on("connection", socket => {
 
 // ---------- Discord ----------
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
+// Comandos avulsos de resenha (sorteio, enquete, meme, Print, lembretes, jogos grátis). Ficam em módulos
+// à parte; se falharem ao carregar, a transmissão continua funcionando.
+let resenha = null;
+const carregarResenha = import("./resenha/comandos.mjs")
+  .then(m => { resenha = m; })
+  .catch(error => console.error("Comandos de resenha desligados:", error.message));
 const efemero = content => ({ content, flags: MessageFlags.Ephemeral });
 
 async function registerCommands() {
@@ -194,19 +201,25 @@ async function registerCommands() {
     new SlashCommandBuilder().setName("transmitir").setDescription("Cria uma sala pública onde todos com o link podem assistir e transmitir."),
     new SlashCommandBuilder().setName("parar").setDescription("Encerra sua transmissão ativa.")
   ].map(c => c.toJSON());
+  await carregarResenha;
+  if (resenha) commands.push(...resenha.definicoes);
   const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
   const route = process.env.DISCORD_GUILD_ID
     ? Routes.applicationGuildCommands(process.env.DISCORD_CLIENT_ID, process.env.DISCORD_GUILD_ID)
     : Routes.applicationCommands(process.env.DISCORD_CLIENT_ID);
   await rest.put(route, { body: commands });
-  console.log("Comandos registrados.");
+  console.log(`Comandos registrados (${commands.length}).`);
 }
 
-client.once("clientReady", () => console.log(`Bot conectado como ${client.user.tag}`));
+client.once("clientReady", () => {
+  console.log(`Bot conectado como ${client.user.tag}`);
+  resenha?.iniciar(client);
+});
 
 client.on("interactionCreate", async interaction => {
-  if (!interaction.isChatInputCommand()) return;
   try {
+    if (resenha && await resenha.tratar(interaction)) return;
+    if (!interaction.isChatInputCommand()) return;
     if (interaction.commandName === "transmitir") {
       const existing = sessionOf(interaction.user.id);
       if (existing) {
