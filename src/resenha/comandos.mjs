@@ -7,8 +7,6 @@ import {
 import { tratarSorteio } from './roleta.mjs';
 import * as grupo from './comunidade.mjs';
 import * as imagens from './imagens.mjs';
-import * as gym from './gym.mjs';
-import path from 'node:path';
 
 const efemero = { flags: MessageFlags.Ephemeral };
 
@@ -32,11 +30,6 @@ export const definicoes = [
     new SlashCommandBuilder().setName('cancelarlembrete').setDescription('Cancela um lembrete seu.')
         .addIntegerOption(o => o.setName('numero').setDescription('Número do lembrete (veja em /lembretes)').setRequired(true).setMinValue(1)),
     new SlashCommandBuilder().setName('gratis').setDescription('Jogos de graça na Epic Games agora.'),
-    new SlashCommandBuilder().setName('treino').setDescription('Gym Rats: marca o treino de hoje (com foto) e ganha 1 ponto.')
-        .addAttachmentOption(o => o.setName('foto').setDescription('Foto do treino (obrigatória)').setRequired(true))
-        .addStringOption(o => o.setName('legenda').setDescription('O que treinou hoje (opcional)').setMaxLength(200)),
-    new SlashCommandBuilder().setName('gym').setDescription('Gym Rats: ranking do mês e sequências 🔥.'),
-    new SlashCommandBuilder().setName('apagartreino').setDescription('Apaga o seu check-in de hoje (se mandou errado).'),
     new SlashCommandBuilder().setName('avisos').setDescription('Usa este canal para jogos grátis e a retrospectiva semanal (admin).')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
 ].map(c => c.toJSON());
@@ -104,36 +97,6 @@ export async function tratar(interaction) {
             else await interaction.editReply({ embeds: jogos.slice(0, 5).map(grupo.embedGratis) });
             return true;
         }
-        case 'treino': {
-            const anexo = interaction.options.getAttachment('foto');
-            if (!anexo.contentType?.startsWith('image/')) { await interaction.reply({ ...efemero, content: 'A foto tem que ser uma imagem 📸' }); return true; }
-            if (anexo.size > 15 * 1024 * 1024) { await interaction.reply({ ...efemero, content: 'Foto grande demais (máx. 15 MB).' }); return true; }
-            await interaction.deferReply();
-            const r = await fetch(anexo.url, { signal: AbortSignal.timeout(20_000) });
-            const nome = interaction.member?.displayName ?? interaction.user.displayName ?? interaction.user.username;
-            const res = await gym.registrar({ userId: interaction.user.id, nome, foto: Buffer.from(await r.arrayBuffer()),
-                legenda: interaction.options.getString('legenda'), origem: 'discord' });
-            if (!res.ok) { await interaction.editReply(res.motivo); return true; }
-            const fogo = res.sequencia >= 2 ? ` · 🔥 ${res.sequencia} dias seguidos` : '';
-            const legenda = interaction.options.getString('legenda');
-            await interaction.editReply({
-                embeds: [{ color: 0xff8a00, title: `💪 ${nome} treinou!`, description: `${legenda ? `${legenda}\n\n` : ''}**${res.pontos}** ponto${res.pontos > 1 ? 's' : ''} no mês · ${res.posicao}º de ${res.total}${fogo}`,
-                    image: { url: 'attachment://treino.jpg' }, footer: { text: 'Gym Rats do Regresso · /gym pra ver o ranking' } }],
-                files: [new AttachmentBuilder(path.join(gym.FOTOS, res.arquivo), { name: 'treino.jpg' })]
-            });
-            return true;
-        }
-        case 'gym': {
-            const ranking = gym.rankingMes();
-            const linhas = ranking.slice(0, 15).map(r => `${r.posicao <= 3 ? ['🥇', '🥈', '🥉'][r.posicao - 1] : `${r.posicao}.`} **${r.nome}** — ${r.pontos} treino${r.pontos > 1 ? 's' : ''}${r.sequencia >= 2 ? ` · 🔥${r.sequencia}` : ''}`);
-            await interaction.reply({ embeds: [{ color: 0xff8a00, title: `🏋️ Gym Rats — ${gym.nomeMes(gym.hoje().slice(0, 7))}`,
-                description: linhas.join('\n') || 'Ninguém treinou ainda este mês. Bora ser o primeiro: `/treino` com a foto! 💪',
-                footer: { text: '1 treino por dia = 1 ponto · empate: quem chegou primeiro' } }], allowedMentions: { parse: [] } });
-            return true;
-        }
-        case 'apagartreino':
-            await interaction.reply({ ...efemero, content: gym.apagarHoje(interaction.user.id) ? '🗑️ Check-in de hoje apagado. Pode mandar de novo.' : 'Você não tem check-in hoje.' });
-            return true;
         case 'avisos':
             grupo.definirCanalAvisos(interaction.channelId);
             await interaction.reply({ content: '📣 Pronto: jogos grátis da Epic e a retrospectiva de domingo (20h) vão sair neste canal.' });
@@ -152,14 +115,4 @@ export function iniciar(client) {
     };
     avisos();
     setInterval(avisos, 30 * 60_000);
-    // Gym Rats: campeão do mês no canal de avisos (dia 1, 9h)
-    const campeao = async () => {
-        const c = gym.campeaoPendente();
-        const id = grupo.canalAvisos();
-        if (!c || !id) return;
-        const canal = await client.channels.fetch(id).catch(() => null);
-        const top = c.ranking.slice(0, 5).map(r => `${r.posicao <= 3 ? ['🥇', '🥈', '🥉'][r.posicao - 1] : `${r.posicao}.`} **${r.nome}** — ${r.pontos} treinos`).join('\n');
-        await canal?.send({ content: `🏆 **Gym Rats de ${gym.nomeMes(c.mes)}**\nCampeão: **${c.ranking[0].nome}** com ${c.ranking[0].pontos} treinos!\n\n${top}\n\nO ranking zerou: bora pro mês novo 💪`, allowedMentions: { parse: [] } });
-    };
-    setInterval(() => campeao().catch(e => console.error('Gym Rats:', e.message)), 15 * 60_000);
 }
